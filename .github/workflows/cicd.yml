@@ -1,0 +1,74 @@
+name: TB Classifier Pipeline
+
+on: 
+  push:
+    paths:
+      - 'deploy.py'
+      - 'api/**'
+      - 'Dockerfile.api'
+      - '.github/workflows/cicd.yml'
+
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Manual trigger reason'
+        type: string
+        default: 'manual-deploy'
+
+jobs:
+  show-settings:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4  # Added: need checkout first
+      
+      - name: Display Pipeline Settings
+        run: |
+          echo "=========================================="
+          echo "PIPELINE SETTINGS"
+          echo "=========================================="
+          echo "Trigger:       ${{ github.event_name }}"
+          echo "Reason:        ${{ github.event.inputs.reason || 'N/A' }}"
+          echo "RUN_TUNING:    ${{ vars.RUN_TUNING }} (default: false)"
+          echo "RUN_TRAINING:  ${{ vars.RUN_TRAINING_BEST_MODEL }} (default: false)"
+          echo "RUN_DEPLOY:    ${{ vars.RUN_DEPLOY_BEST_MODEL }} (default: true)"
+          echo "=========================================="
+
+  tune:
+    needs: show-settings
+    runs-on: ubuntu-latest
+    if: vars.RUN_TUNING == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with: {python-version: '3.10'}
+      - run: pip install -r requirements.txt
+      - run: |
+          echo "Starting tuning..."
+          python tune.py
+
+  train:
+    needs: [show-settings, tune]
+    runs-on: ubuntu-latest
+    if: |
+      vars.RUN_TRAINING_BEST_MODEL == 'true' && 
+      (needs.tune.result == 'success' || needs.tune.result == 'skipped')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with: {python-version: '3.10'}
+      - run: pip install -r requirements.txt
+      - run: |
+          echo "Starting training..."
+          python train_final.py
+
+  deploy:
+    runs-on: ubuntu-latest
+    if: vars.RUN_DEPLOY_BEST_MODEL == 'true'
+    steps:
+      - uses: actions/checkout@v4  # Added: need checkout    
+      - name: Deploy
+        run: |
+          echo "Starting deployment..."
+          echo "Reason: ${{ github.event.inputs.reason || 'git-push' }}"
+          echo "Deploying to production..."
+          # python deploy.py
