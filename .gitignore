@@ -1,0 +1,6 @@
+.ipynb_checkpoints/
+dataset/
+mlruns/
+mlflow/
+optuna_studies/
+*.ckpt
