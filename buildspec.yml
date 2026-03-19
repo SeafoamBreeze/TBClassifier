@@ -1,0 +1,34 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.11
+    commands:
+      - echo "Installing dependencies..."
+      - python -m pip install --upgrade pip
+      - pip install --quiet pytorch-lightning optuna "optuna-integration[pytorch-lightning]" mlflow torchinfo plotly boto3
+
+  pre_build:
+    commands:
+      - echo "Environment variables:"
+      - echo "RUN_TUNING=$RUN_TUNING"
+      - echo "RUN_TRAINING=$RUN_TRAINING"
+      - echo "S3_BUCKET=$S3_BUCKET"
+
+  build:
+    commands:
+      - echo "Starting Docker container..."
+      - docker build -t tbclassifier .
+      - docker run --rm \
+          -e RUN_TUNING=$RUN_TUNING \
+          -e RUN_TRAINING=$RUN_TRAINING \
+          -e S3_BUCKET=$S3_BUCKET \
+          -e OPTUNA_DB_S3_KEY=$OPTUNA_DB_S3_KEY \
+          -e MLFLOW_DB_S3_KEY=$MLFLOW_DB_S3_KEY \
+          tbclassifier
+
+artifacts:
+  files:
+    - "**/*"
+  base-directory: "."

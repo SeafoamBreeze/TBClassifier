@@ -4,3 +4,4 @@ mlruns/
 mlflow/
 optuna_studies/
 *.ckpt
+*.env
