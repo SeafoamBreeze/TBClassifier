@@ -3,5 +3,6 @@ dataset/
 mlruns/
 mlflow/
 optuna_studies/
+1/
 *.ckpt
 *.env
