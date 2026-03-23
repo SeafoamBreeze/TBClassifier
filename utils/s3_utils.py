@@ -1,6 +1,6 @@
 import os
 import boto3
-from config import BUCKET, DATASET_PATH, STUDY_DB, TRACKING_DB
+from config import S3_BUCKET, DATASET_PATH, STUDY_DB, TRACKING_TUNING_DB
 
 def upload_file_to_s3(file_name, s3_bucket, s3_destination):
     s3 = boto3.client("s3")
@@ -10,11 +10,14 @@ def upload_file_to_s3(file_name, s3_bucket, s3_destination):
     except Exception as e:
         print(f"upload_file_to_s3(): Upload failed: {e}")
 
+def download_model_hyperparameters():
+
+    download_from_s3(bucket=S3_BUCKET, prefix="training/best_params.json", local_dir="/")
 
 def download_dataset_from_s3():
 
-    download_from_s3(BUCKET, str(DATASET_PATH/"train"), str(DATASET_PATH/"train"))
-    download_from_s3(BUCKET, str(DATASET_PATH/"test"), str(DATASET_PATH/"test"))
+    download_from_s3(bucket=S3_BUCKET, prefix=str(DATASET_PATH/"train"), local_dir=str(DATASET_PATH/"train"))
+    download_from_s3(bucket=S3_BUCKET, prefix=str(DATASET_PATH/"test"), local_dir=str(DATASET_PATH/"test"))
 
 def download_from_s3(bucket, prefix, local_dir):
 
@@ -22,6 +25,7 @@ def download_from_s3(bucket, prefix, local_dir):
     paginator = s3.get_paginator("list_objects_v2")
 
     for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+
         if "Contents" not in page:
             continue
 
@@ -33,7 +37,6 @@ def download_from_s3(bucket, prefix, local_dir):
 
             relative_path = os.path.relpath(s3_key, prefix)
             local_path = os.path.join(local_dir, relative_path)
-
             os.makedirs(os.path.dirname(local_path), exist_ok=True)
 
             try:

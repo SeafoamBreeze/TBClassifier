@@ -13,7 +13,7 @@ from pytorch_lightning.loggers import MLFlowLogger
 from data_pipeline.data_pipeline import DataPipeline
 from neural_network.densenet_classifier import DenseNetClassifier
 
-from config import DATASET_PATH, TRACKING_DB, STUDY_DB
+from config import DATASET_PATH, TRACKING_TUNING_DB, STUDY_DB
 
 def objective(trial):
 
@@ -77,7 +77,7 @@ def objective(trial):
                 enable_progress_bar=True,
                 logger=MLFlowLogger(
                     experiment_name="TBClassifier_tuning",
-                    tracking_uri=f"sqlite:///{TRACKING_DB}"
+                    tracking_uri=f"sqlite:///{TRACKING_TUNING_DB}"
                 ),
                 deterministic=True
             )
