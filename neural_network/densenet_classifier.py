@@ -8,6 +8,7 @@ from sklearn.metrics import precision_score, recall_score, fbeta_score, matthews
 
 class DenseNetClassifier(pl.LightningModule):
     def __init__(self, learning_rate, dropout, weight_decay):
+
         super().__init__()
         self.save_hyperparameters()
         self.backbone = models.densenet121(weights="IMAGENET1K_V1")
@@ -79,6 +80,8 @@ class DenseNetClassifier(pl.LightningModule):
         acc = (preds == y).float().mean()
         loss = F.cross_entropy(logits, y, weight=self.class_weights)
 
+        # TODO: Look into torchmetrics.classification
+        # Numpy requires CPU so either use the above library or move it to on_epoch_end
         tb_class = 2
         tb_precision = precision_score(y.cpu().numpy(), preds.cpu().numpy(), labels=[tb_class], average="macro", zero_division=0)
         tb_recall = recall_score(y.cpu().numpy(), preds.cpu().numpy(), labels=[tb_class], average="macro", zero_division=0)

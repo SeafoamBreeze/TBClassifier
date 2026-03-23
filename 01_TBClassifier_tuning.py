@@ -22,5 +22,5 @@ if __name__ == "__main__":
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     upload_file_to_s3(str(STUDY_DB), S3_BUCKET, f"tuning/{timestamp}/optuna_study.db")
     upload_file_to_s3(str(TRACKING_TUNING_DB), S3_BUCKET, f"tuning/{timestamp}/mlflow.db")
-    upload_file_to_s3("best_params.json", S3_BUCKET, f"tuning/{timestamp}/best_params.json")
-    upload_file_to_s3("best_params.json", S3_BUCKET, "training/best_params.json")
+    upload_file_to_s3(str(STUDY_DB), S3_BUCKET, f"tuning/latest/optuna_study.db")
+    upload_file_to_s3(str(TRACKING_TUNING_DB), S3_BUCKET, f"tuning/latest/mlflow.db")

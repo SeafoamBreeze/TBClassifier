@@ -9,6 +9,7 @@ from optuna.pruners import HyperbandPruner
 from optuna.trial import TrialState
 import mlflow
 from pytorch_lightning.loggers import MLFlowLogger
+from collections import Counter
 
 from data_pipeline.data_pipeline import DataPipeline
 from neural_network.densenet_classifier import DenseNetClassifier
@@ -226,3 +227,29 @@ def run_optimization(n_trials, timeout, n_splits, max_epochs_per_fold):
         print("No successful trials completed!")
 
     return study
+
+def get_robust_median_epoch(study):
+
+    epochs = []
+
+    states = Counter(t.state.name for t in study.trials)
+    print(f"\noptuna_utils.get_robust_median_epoch(): Summary: {dict(states)}")
+
+    for trial in study.trials:
+
+        if trial.state == optuna.trial.TrialState.FAIL:
+            continue
+        
+        epoch = (
+            trial.user_attrs.get('early_stopped_epoch') or
+            trial.user_attrs.get('best_epoch') or
+            trial.user_attrs.get('pruned_epoch') or
+            trial.user_attrs.get('final_epoch') or
+            trial.user_attrs.get('last_completed_epoch') or
+            trial.last_step
+        )
+        
+        if epoch:
+            epochs.append(int(epoch))
+    
+    return int(np.median(epochs)) if epochs else 30

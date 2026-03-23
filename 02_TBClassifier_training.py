@@ -1,27 +1,63 @@
-from utils.optuna_utils import run_optimization
-from utils.s3_utils import download_model_hyperparameters
+from data_pipeline.data_pipeline import DataPipeline
+from neural_network.densenet_classifier import DenseNetClassifier
+from utils.optuna_utils import get_robust_median_epoch
+from utils.s3_utils import download_latest_optuna_study
 import boto3
 import mlflow
-from config import STUDY_DB, TRACKING_TUNING_DB, S3_BUCKET
+from config import DATASET_PATH, STUDY_DB, TRACKING_TRAINING_DB, S3_BUCKET
 from datetime import datetime
+import optuna
+import pytorch_lightning as pl
+import torch
+from pytorch_lightning.loggers import MLFlowLogger
 
 if __name__ == "__main__":
 
-    mlflow.set_tracking_uri(f"sqlite:///{TRACKING_TUNING_DB}")
+    mlflow.set_tracking_uri(f"sqlite:///{TRACKING_TRAINING_DB}")
     mlflow.set_experiment("TBClassifier_tuning")
+    mlflow.pytorch.autolog(registered_model_name="TBClassifier_Best_Model")
 
-    download_model_hyperparameters()
+    download_latest_optuna_study()
 
-    # Final Training
-    study = run_optimization(
-        n_trials=10,
-        timeout=3600*10,
-        n_splits=5,
-        max_epochs_per_fold=30
+    study = optuna.load_study(
+        study_name="TBClassifier",
+        storage=f"sqlite:///{STUDY_DB}"
     )
+
+    best_params = study.best_params
+
+    datamodule = DataPipeline(
+        dataset_dir=DATASET_PATH,
+        batch_size=best_params['batch_size'],
+        tuning = False
+    )
+
+    model = DenseNetClassifier(
+        learning_rate=best_params['learning_rate'],
+        dropout=best_params['dropout'],
+        weight_decay=best_params['weight_decay']
+    )
+    
+    trainer = pl.Trainer(
+        max_epochs=get_robust_median_epoch(study),
+        accelerator='gpu' if torch.cuda.is_available() else 'cpu',
+        devices=1,
+        callbacks=[],
+        enable_progress_bar=True,
+        logger=MLFlowLogger(
+            experiment_name="TBClassifier_best_model",
+            tracking_uri=f"sqlite:///{TRACKING_TRAINING_DB}"
+        ),
+        deterministic=True
+    )
+
+    trainer.fit(model, datamodule)
+    trainer.test(model, datamodule)
 
     # TODO: Set up api to view optuna tuning graphs by importing the study
     # TODO: Plot the relevant graphs after training the model 
+    # TODO: Model Registry
+    # TODO: Generate sklearn metric without training?
 
     s3 = boto3.client("s3")
 
