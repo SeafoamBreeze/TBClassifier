@@ -1,7 +1,22 @@
 import os
 import boto3
+from config import BUCKET, DATASET_PATH, STUDY_DB, TRACKING_DB
 
-def download_dataset(bucket, prefix, local_dir):
+def upload_file_to_s3(file_name, s3_bucket, s3_destination):
+    s3 = boto3.client("s3")
+    try:    
+        print(f"upload_file_to_s3(): Uploading to {upload_file_to_s3}")
+        s3.upload_file(file_name, s3_bucket, s3_destination)
+    except Exception as e:
+        print(f"upload_file_to_s3(): Upload failed: {e}")
+
+
+def download_dataset_from_s3():
+
+    download_from_s3(BUCKET, str(DATASET_PATH/"train"), str(DATASET_PATH/"train"))
+    download_from_s3(BUCKET, str(DATASET_PATH/"test"), str(DATASET_PATH/"test"))
+
+def download_from_s3(bucket, prefix, local_dir):
 
     s3 = boto3.client("s3")
     paginator = s3.get_paginator("list_objects_v2")
@@ -22,9 +37,9 @@ def download_dataset(bucket, prefix, local_dir):
             os.makedirs(os.path.dirname(local_path), exist_ok=True)
 
             try:
-                print(f"Downloading {s3_key} → {local_path}")
+                print(f"download_from_s3(): Downloading {s3_key} → {local_path}")
                 s3.download_file(bucket, s3_key, local_path)
             except Exception as e:
-                print(f"Download failed: {e}")
+                print(f"download_from_s3(): Download failed: {e}")
 
 
