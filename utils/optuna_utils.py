@@ -50,7 +50,8 @@ def objective(trial):
                 dataset_dir=DATASET_PATH,
                 batch_size=hyperparams['batch_size'],
                 fold_idx=fold_idx,
-                n_splits=5
+                n_splits=5,
+                tuning = True
             )
 
             model = DenseNetClassifier(

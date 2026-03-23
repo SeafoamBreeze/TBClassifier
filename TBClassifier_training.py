@@ -2,7 +2,7 @@ from utils.optuna_utils import run_optimization
 from utils.s3_utils import download_dataset
 import boto3
 import mlflow
-from config import STUDY_DB, TRACKING_DB, BUCKET, DATASET_PATH, S3_DATASET_PATH
+from config import STUDY_DB, TRACKING_DB, BUCKET
 
 if __name__ == "__main__":
 
