@@ -15,6 +15,9 @@ if __name__ == "__main__":
 
     mlflow.set_tracking_uri(f"sqlite:///{TRACKING_TRAINING_DB}")
     mlflow.set_experiment("TBClassifier_tuning")
+
+    # TODO: Model Registry
+    # TODO: Generate sklearn metric without training?
     mlflow.pytorch.autolog(registered_model_name="TBClassifier_Best_Model")
 
     download_latest_optuna_study()
@@ -25,6 +28,7 @@ if __name__ == "__main__":
     )
 
     best_params = study.best_params
+    print(f"Best Params: {best_params}")
 
     datamodule = DataPipeline(
         dataset_dir=DATASET_PATH,
@@ -56,8 +60,7 @@ if __name__ == "__main__":
 
     # TODO: Set up api to view optuna tuning graphs by importing the study
     # TODO: Plot the relevant graphs after training the model 
-    # TODO: Model Registry
-    # TODO: Generate sklearn metric without training?
+
 
     s3 = boto3.client("s3")
 
