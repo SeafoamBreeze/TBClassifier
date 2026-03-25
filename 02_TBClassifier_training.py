@@ -1,24 +1,23 @@
 from data_pipeline.data_pipeline import DataPipeline
 from neural_network.densenet_classifier import DenseNetClassifier
 from utils.optuna_utils import get_robust_median_epoch
-from utils.s3_utils import download_latest_optuna_study
-import boto3
+from utils.s3_utils import download_latest_optuna_study, upload_file_to_s3  
 import mlflow
 from config import DATASET_PATH, STUDY_DB, TRACKING_TRAINING_DB, S3_BUCKET
-from datetime import datetime
 import optuna
 import pytorch_lightning as pl
 import torch
 from pytorch_lightning.loggers import MLFlowLogger
+import os
+
+FIT_TEST_MODEL = os.environ.get("FIT_TEST_MODEL", "false").lower() == "true"
 
 if __name__ == "__main__":
 
-    mlflow.set_tracking_uri(f"sqlite:///{TRACKING_TRAINING_DB}")
-    mlflow.set_experiment("TBClassifier_tuning")
-
-    # TODO: Model Registry
-    # TODO: Generate sklearn metric without training?
-    mlflow.pytorch.autolog(registered_model_name="TBClassifier_Best_Model")
+    mlflow_logger = MLFlowLogger(
+        experiment_name="TBClassifier_PROD",
+        tracking_uri=f"sqlite:///{TRACKING_TRAINING_DB}"
+    )
 
     download_latest_optuna_study()
 
@@ -28,7 +27,10 @@ if __name__ == "__main__":
     )
 
     best_params = study.best_params
+    print(f"Best Trial: {study.best_trial.number}")
     print(f"Best Params: {best_params}")
+
+    mlflow_logger.log_hyperparams(best_params)
 
     datamodule = DataPipeline(
         dataset_dir=DATASET_PATH,
@@ -46,29 +48,23 @@ if __name__ == "__main__":
         max_epochs=get_robust_median_epoch(study),
         accelerator='gpu' if torch.cuda.is_available() else 'cpu',
         devices=1,
-        callbacks=[],
-        enable_progress_bar=True,
-        logger=MLFlowLogger(
-            experiment_name="TBClassifier_best_model",
-            tracking_uri=f"sqlite:///{TRACKING_TRAINING_DB}"
-        ),
+        enable_progress_bar=True,   
+        logger=mlflow_logger,
         deterministic=True
     )
 
-    trainer.fit(model, datamodule)
-    trainer.test(model, datamodule)
+    if (FIT_TEST_MODEL):
+        print("Begin model fitting and testing")
+        trainer.fit(model, datamodule)
+        trainer.test(model, datamodule)
+    else:
+        print("Skipping model fitting and testing")
 
-    # TODO: Set up api to view optuna tuning graphs by importing the study
-    # TODO: Plot the relevant graphs after training the model 
+    mlflow.pytorch.log_model(
+        run_id=mlflow_logger.run_id,
+        pytorch_model=model,
+        artifact_path="model",
+        registered_model_name="tbClassifier_PROD"
+    )
 
-
-    s3 = boto3.client("s3")
-
-    try:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        s3.upload_file(str(STUDY_DB), S3_BUCKET, f"tuning/{timestamp}/optuna_study.db")
-        s3.upload_file(str(TRACKING_TUNING_DB), S3_BUCKET, f"tuning/{timestamp}/mlflow.db")
-        s3.upload_file("best_params.json", S3_BUCKET, f"tuning/{timestamp}/best_params.json")
-        s3.upload_file("best_params.json", S3_BUCKET, "training/best_params.json")
-    except Exception as e:
-        print(f"Upload failed: {e}")
+    upload_file_to_s3(str(TRACKING_TRAINING_DB), S3_BUCKET, "training-artifact/mlflow.db")

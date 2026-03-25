@@ -1,6 +1,7 @@
 import os
 import boto3
 from config import S3_BUCKET, DATASET_PATH, OPTUNA_DIR
+from pathlib import Path
 
 def upload_file_to_s3(file_name, s3_bucket, s3_destination):
     s3 = boto3.client("s3")
@@ -11,11 +12,14 @@ def upload_file_to_s3(file_name, s3_bucket, s3_destination):
         print(f"upload_file_to_s3(): Upload failed: {e}")
 
 def download_latest_optuna_study():
-    download_from_s3(bucket=S3_BUCKET, prefix="tuning/latest/optuna_study.db", local_dir=str(OPTUNA_DIR))
+    download_from_s3(bucket=S3_BUCKET, prefix="tuning-artifact/latest/optuna_studies", local_dir=str(OPTUNA_DIR))
+    verify_item_count("tuning-artifact/latest/optuna_studies", {".db"})
 
 def download_dataset_from_s3():
     download_from_s3(bucket=S3_BUCKET, prefix=str(DATASET_PATH/"train"), local_dir=str(DATASET_PATH/"train"))
     download_from_s3(bucket=S3_BUCKET, prefix=str(DATASET_PATH/"test"), local_dir=str(DATASET_PATH/"test"))
+    verify_item_count(DATASET_PATH/"train", {".png"})
+    verify_item_count(DATASET_PATH/"test", {".png"})
 
 def download_from_s3(bucket, prefix, local_dir):
 
@@ -43,4 +47,17 @@ def download_from_s3(bucket, prefix, local_dir):
             except Exception as e:
                 print(f"download_from_s3(): Download failed: {e}")
 
+def verify_item_count(dataset_path, ext_dict):
 
+    if not dataset_path.exists():
+        print(f"Path not found: {dataset_path}")
+        return
+    
+    print(f"Looking in {dataset_path}")
+    for class_dir in dataset_path.iterdir():
+        if class_dir.is_dir():
+            count = sum(
+                1 for f in class_dir.rglob("*")
+                if f.suffix.lower() in ext_dict
+            )
+            print(f"{class_dir.name}: {count}")
