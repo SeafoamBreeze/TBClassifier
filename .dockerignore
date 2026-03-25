@@ -1,0 +1,17 @@
+__pycache__/
+.github/
+.ipynb_checkpoints/
+*.pyc
+*.pyo
+*.pyd
+.env
+.git
+mlflow/
+mlruns/
+optuna_studies/
+optuna/
+dataset/
+1/
+*.json
+*.ipynb
+*.db

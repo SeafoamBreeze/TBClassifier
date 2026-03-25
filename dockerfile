@@ -1,8 +1,7 @@
 FROM python:3.11-slim
 WORKDIR /TBClassifier
-COPY . /TBClassifier
-RUN python -m pip install --upgrade pip \
-    && pip install --quiet pytorch-lightning \
-                       optuna "optuna-integration[pytorch-lightning]" \
-                       mlflow torchinfo plotly boto3
+COPY requirements.txt .
+RUN python -m pip install --upgrade "pip==24.0" \
+    && pip install --no-cache-dir -r requirements.txt
+COPY . .                       
 CMD ["python", "entrypoint.py"]
