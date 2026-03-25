@@ -59,8 +59,6 @@ class DenseNetClassifier(pl.LightningModule):
         self.val_preds.append(preds.detach().cpu())
         self.val_targets.append(y.detach().cpu())
 
-        return loss
-
     def on_validation_epoch_end(self):
 
         preds = torch.cat(self.val_preds)
