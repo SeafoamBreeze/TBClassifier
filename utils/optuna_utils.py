@@ -58,7 +58,8 @@ def objective(trial):
             model = DenseNetClassifier(
                 learning_rate=hyperparams['learning_rate'],
                 dropout=hyperparams['dropout'],
-                weight_decay=hyperparams['weight_decay']
+                weight_decay=hyperparams['weight_decay'],
+                tuning = True
             )
 
             early_stop = EarlyStopping(

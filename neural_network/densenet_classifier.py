@@ -7,11 +7,12 @@ from sklearn.metrics import precision_score, recall_score, fbeta_score, matthews
 
 class DenseNetClassifier(pl.LightningModule):
 
-    def __init__(self, learning_rate, dropout, weight_decay):
+    def __init__(self, learning_rate, dropout, weight_decay, tuning):
 
         super().__init__()
         self.save_hyperparameters()
         self.backbone = models.densenet121(weights="IMAGENET1K_V1")
+        self.tuning = tuning
 
         in_features = self.backbone.classifier.in_features
         self.backbone.classifier = nn.Sequential(
@@ -128,19 +129,26 @@ class DenseNetClassifier(pl.LightningModule):
         self.test_targets.clear()
 
     def configure_optimizers(self):
+
         optimizer = torch.optim.Adam(
             self.parameters(),
             lr=self.hparams.learning_rate,
             weight_decay=self.hparams.weight_decay
         )
+        
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer, mode='min', factor=0.5, patience=3
         )
-        return {
-            'optimizer': optimizer,
-            'lr_scheduler': {
-                'scheduler': scheduler,
-                'monitor': 'val_loss',
-                'interval': 'epoch'
+
+        if self.tuning:
+            return {
+                'optimizer': optimizer,
+                'lr_scheduler': {
+                    'scheduler': scheduler,
+                    'monitor': 'val_loss',
+                    'interval': 'epoch'
+                }
             }
-        }
+        
+        return optimizer
+            

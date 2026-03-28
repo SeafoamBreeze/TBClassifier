@@ -83,10 +83,14 @@ class DataPipeline(pl.LightningDataModule):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=0)
 
     def val_dataloader(self):
-        return None if self.val_dataset is None else DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=0)
+        if self.tuning:
+            return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=0)
+        return []
     
     def test_dataloader(self):
-        return None if self.val_dataset is None else DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, num_workers=0)
+        if not self.tuning:
+            return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, num_workers=0)
+        return []
 
 
 class PathDataset(Dataset):
