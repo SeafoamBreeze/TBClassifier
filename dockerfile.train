@@ -4,4 +4,4 @@ COPY requirements.txt .
 RUN python -m pip install --upgrade "pip==24.0" \
     && pip install --no-cache-dir -r requirements.txt
 COPY . .                       
-CMD ["python", "entrypoint.py"]
+CMD ["python", "01_TBClassifier_training.py"]

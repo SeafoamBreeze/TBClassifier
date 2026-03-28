@@ -6,3 +6,4 @@ optuna_studies/
 1/
 *.ckpt
 *.env
+*.pth

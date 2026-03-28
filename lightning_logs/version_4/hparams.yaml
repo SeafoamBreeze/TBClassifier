@@ -1,0 +1,4 @@
+dropout: 0.21865652665653285
+learning_rate: 0.00015514919971479425
+tuning: false
+weight_decay: 2.485139716480054e-05

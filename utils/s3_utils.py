@@ -1,7 +1,11 @@
 import os
 import boto3
-from config import S3_BUCKET, DATASET_PATH, OPTUNA_DIR
+from config import S3_BUCKET, DATASET_PATH, OPTUNA_DIR, S3_PREFIX_PRODUCTION_MODEL, S3_PREFIX_OPTUNA_STUDIES
 from pathlib import Path
+
+def download_production_model():
+    download_from_s3(bucket=S3_BUCKET, prefix=str(S3_PREFIX_PRODUCTION_MODEL), local_dir="")
+    verify_item_count(str(S3_PREFIX_PRODUCTION_MODEL), {".pth"})
 
 def upload_file_to_s3(file_name, s3_bucket, s3_destination):
     s3 = boto3.client("s3")
@@ -12,8 +16,8 @@ def upload_file_to_s3(file_name, s3_bucket, s3_destination):
         print(f"upload_file_to_s3(): Upload failed: {e}")
 
 def download_latest_optuna_study():
-    download_from_s3(bucket=S3_BUCKET, prefix="tuning-artifact/latest/optuna_studies", local_dir=str(OPTUNA_DIR))
-    verify_item_count("tuning-artifact/latest/optuna_studies", {".db"})
+    download_from_s3(bucket=S3_BUCKET, prefix=str(S3_PREFIX_OPTUNA_STUDIES), local_dir=str(OPTUNA_DIR))
+    verify_item_count(str(S3_PREFIX_OPTUNA_STUDIES), {".db"})
 
 def download_dataset_from_s3():
     download_from_s3(bucket=S3_BUCKET, prefix=str(DATASET_PATH/"train"), local_dir=str(DATASET_PATH/"train"))

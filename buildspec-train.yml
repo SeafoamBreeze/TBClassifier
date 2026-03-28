@@ -13,7 +13,7 @@ phases:
   build:
     commands:
       - echo "Starting Docker container..."
-      - docker build -t tbclassifier .
+      - docker build -f Dockerfile.train -t tbclassifier .
       - docker run --rm \
           -e RUN_01_TUNING_SCRIPT=$RUN_01_TUNING_SCRIPT \
           -e RUN_02_TRAINING_SCRIPT=$RUN_02_TRAINING_SCRIPT \

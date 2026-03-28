@@ -11,10 +11,10 @@ import mlflow
 from pytorch_lightning.loggers import MLFlowLogger
 from collections import Counter
 
-from data_pipeline.data_pipeline import DataPipeline
-from neural_network.densenet_classifier import DenseNetClassifier
+from src.data_pipeline.data_pipeline import DataPipeline
+from src.neural_network.densenet_classifier import DenseNetClassifier
 
-from config import DATASET_PATH, TRACKING_TUNING_DB, STUDY_DB
+from config import DATASET_PATH, TRACKING_DB, STUDY_DB
 
 def objective(trial):
 
@@ -79,7 +79,7 @@ def objective(trial):
                 enable_progress_bar=True,
                 logger=MLFlowLogger(
                     experiment_name="TBClassifier_tuning",
-                    tracking_uri=f"sqlite:///{TRACKING_TUNING_DB}"
+                    tracking_uri=f"sqlite:///{TRACKING_DB}"
                 ),
                 deterministic=True
             )
@@ -252,5 +252,8 @@ def get_robust_median_epoch(study):
         
         if epoch:
             epochs.append(int(epoch))
-    
-    return int(np.median(epochs)) if epochs else 30
+
+        median = int(np.median(epochs))
+        mlflow.log_metric("Median Epochs", median)
+
+    return median
