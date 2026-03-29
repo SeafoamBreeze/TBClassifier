@@ -1,5 +1,9 @@
 name: TB Classifier Pipeline
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
   RUN_01_TRAINING_SCRIPT:         ${{ vars.RUN_01_TRAINING_SCRIPT }}
   RUN_02_DEPLOY_SCRIPT:           ${{ vars.RUN_02_DEPLOY_SCRIPT }}
@@ -27,12 +31,12 @@ jobs:
           echo "=========================================="
           echo "PIPELINE SETTINGS"
           echo "=========================================="
-          echo "Trigger:                    ${{ github.event_name }}"
-          echo "Reason:                     ${{ github.event.inputs.reason || 'N/A' }}"
-          echo "RUN_01_TRAINING_SCRIPT:     ${{ vars.RUN_01_TRAINING_SCRIPT }}"
-          echo "RUN_02_DEPLOY_SCRIPT:       ${{ vars.RUN_02_DEPLOY_SCRIPT }}"
-          echo "RUN_02_DEPLOY_SCRIPT:       ${{ vars.MLFLOW_DEFAULT_ARTIFACT_ROOT }}"
-          echo "DEMO_VERSION:               ${{ vars.DEMO_VERSION }}"
+          echo "Trigger:                            ${{ github.event_name }}"
+          echo "Reason:                             ${{ github.event.inputs.reason || 'N/A' }}"
+          echo "RUN_01_TRAINING_SCRIPT:             ${{ vars.RUN_01_TRAINING_SCRIPT }}"
+          echo "RUN_02_DEPLOY_SCRIPT:               ${{ vars.RUN_02_DEPLOY_SCRIPT }}"
+          echo "MLFLOW_DEFAULT_ARTIFACT_ROOT:       ${{ vars.MLFLOW_DEFAULT_ARTIFACT_ROOT }}"
+          echo "DEMO_VERSION:                       ${{ vars.DEMO_VERSION }}"
           echo "=========================================="
 
   train:
