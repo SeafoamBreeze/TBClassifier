@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import models
-from sklearn.metrics import precision_score, recall_score, fbeta_score, matthews_corrcoef, confusion_matrix
+from sklearn.metrics import precision_score, recall_score, fbeta_score, matthews_corrcoef, confusion_matrix, precision_recall_curve, auc
 import matplotlib.pyplot as plt
 import seaborn as sns
 import mlflow
@@ -49,6 +49,7 @@ class DenseNetClassifier(pl.LightningModule):
         acc = (preds == y).float().mean()
         loss = F.cross_entropy(logits, y, weight=self.class_weights)
 
+        self.log("train_loss", loss)
         mlflow.log_metric("train_acc", acc.item(), step=self.global_step)
         mlflow.log_metric("train_loss", loss.item(), step=self.global_step)
 
@@ -113,21 +114,7 @@ class DenseNetClassifier(pl.LightningModule):
         y_true = all_targets.numpy()
 
         self.save_predictions(y_pred, y_true)
-
-        tb_class = 2
-        metrics = {
-            "test_TB_precision": precision_score(y_true, y_pred, labels=[tb_class], average=None)[0],
-            "test_TB_recall": recall_score(y_true, y_pred, labels=[tb_class], average=None)[0],
-            "test_TB_f2": fbeta_score(y_true, y_pred, beta=2, labels=[tb_class], average=None)[0],
-            "test_mcc": matthews_corrcoef(y_true, y_pred),
-        }
-        
-        for name, value in metrics.items():
-             mlflow.log_metric(name, value)
-
-        cm = confusion_matrix(y_true, y_pred, labels=[0, 1, 2])
-        self.create_plot(cm, normalize=False)
-        self.create_plot(cm, normalize=True)
+        self.generate_metrics(y_pred, y_true)
 
         self.test_preds = []
         self.test_targets = []
@@ -156,7 +143,47 @@ class DenseNetClassifier(pl.LightningModule):
         
         return optimizer
 
-    def create_plot(self, cm, normalize):
+    def save_predictions(self, y_pred, y_true):
+        df = pd.DataFrame({"y_true": y_true, "y_pred": y_pred})
+        file_path = "predictions.csv"
+        df.to_csv(file_path, index=False)
+        mlflow.log_artifact(file_path)
+
+    def generate_metrics(self, y_pred, y_true):
+
+        classes = {
+            "Healthy": 0,
+            "SickNonTB": 1,
+            "TB": 2
+        }
+        metric_names = ["Precision", "Recall", "Specificity", "F2", "MCC"]
+
+        cm = confusion_matrix(y_true, y_pred, labels=[0, 1, 2])
+        self.create_cm_plot(cm, normalize=False)
+        self.create_cm_plot(cm, normalize=True) 
+
+        metrics = {}
+        for name, cls in classes.items():
+            precision = precision_score(y_true, y_pred, labels=[cls], average=None)[0]
+            recall = recall_score(y_true, y_pred, labels=[cls], average=None)[0]
+            f2 = fbeta_score(y_true, y_pred, beta=2, labels=[cls], average=None)[0]
+            tn = cm.sum() - (cm[cls, :].sum() + cm[:, cls].sum() - cm[cls, cls])
+            fp = cm[:, cls].sum() - cm[cls, cls]
+            specificity = tn / (tn + fp)
+            mcc = matthews_corrcoef((y_true==cls).astype(int), (y_pred==cls).astype(int))
+
+            metrics[name] = [precision, recall, specificity, f2, mcc]
+
+        df = pd.DataFrame(metrics, index=metric_names).T
+        df.to_csv("class_metrics.csv", index=False)
+        mlflow.log_artifact("class_metrics.csv")
+
+        self.plot_class_metrics(df)
+
+        for i, value in enumerate(metrics[name]):
+            mlflow.log_metric(f"{name}_{metric_names[i]}", value)
+
+    def create_cm_plot(self, cm, normalize):
 
         class_labels = ["Health", "SickNonTb", "TB"]
 
@@ -198,8 +225,19 @@ class DenseNetClassifier(pl.LightningModule):
         fig.savefig(output_name, dpi=300)
         plt.close(fig)
 
-    def save_predictions(self, y_pred, y_true):
-        df = pd.DataFrame({"y_true": y_true, "y_pred": y_pred})
-        file_path = "predictions.csv"
-        df.to_csv(file_path, index=False)
-        mlflow.log_artifact(file_path, artifact_path="predictions")
+    def plot_class_metrics(self, df):
+        fig, ax = plt.subplots(figsize=(8, 2))
+        ax.axis('off')
+        table = ax.table(cellText=df.round(2).values,
+                        rowLabels=df.index,
+                        colLabels=df.columns,
+                        cellLoc='center',
+                        loc='center')
+        table.auto_set_font_size(False)
+        table.set_fontsize(10)
+        table.scale(1.2, 1.2)
+
+        plt.title("Class-wise Metrics")
+        plt.savefig("class_metrics.png", dpi=300, bbox_inches='tight')
+        mlflow.log_figure(fig, "Class-wise Metrics")
+        plt.close()

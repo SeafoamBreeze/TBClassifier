@@ -1,74 +1,99 @@
 name: TB Classifier Pipeline
 
+env:
+  RUN_01_TRAINING_SCRIPT:         ${{ vars.RUN_01_TRAINING_SCRIPT }}
+  RUN_02_DEPLOY_SCRIPT:           ${{ vars.RUN_02_DEPLOY_SCRIPT }}
+  MLFLOW_DEFAULT_ARTIFACT_ROOT:   ${{ vars.MLFLOW_DEFAULT_ARTIFACT_ROOT }}
+  DEMO_VERSION:                   ${{ vars.DEMO_VERSION }}
 on: 
   push:
-    paths:
-      - 'deploy.py'
-      - 'api/**'
-      - 'Dockerfile.api'
-      - '.github/workflows/cicd.yml'
+    branches: [ main ]
 
   workflow_dispatch:
     inputs:
       reason:
-        description: 'Manual trigger reason'
+        description: "Manual trigger reason"
         type: string
-        default: 'manual-deploy'
+        default: "manual-deploy"
 
 jobs:
+
   show-settings:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4  # Added: need checkout first
-      
+      - uses: actions/checkout@v4
       - name: Display Pipeline Settings
         run: |
           echo "=========================================="
           echo "PIPELINE SETTINGS"
           echo "=========================================="
-          echo "Trigger:       ${{ github.event_name }}"
-          echo "Reason:        ${{ github.event.inputs.reason || 'N/A' }}"
-          echo "RUN_TUNING:    ${{ vars.RUN_TUNING }} (default: false)"
-          echo "RUN_TRAINING:  ${{ vars.RUN_TRAINING_BEST_MODEL }} (default: false)"
-          echo "RUN_DEPLOY:    ${{ vars.RUN_DEPLOY_BEST_MODEL }} (default: true)"
+          echo "Trigger:                    ${{ github.event_name }}"
+          echo "Reason:                     ${{ github.event.inputs.reason || "N/A" }}"
+          echo "RUN_01_TRAINING_SCRIPT:     ${{ vars.RUN_01_TRAINING_SCRIPT }}"
+          echo "RUN_02_DEPLOY_SCRIPT:       ${{ vars.RUN_02_DEPLOY_SCRIPT }}"
+          echo "RUN_02_DEPLOY_SCRIPT:       ${{ vars.MLFLOW_DEFAULT_ARTIFACT_ROOT }}"
+          echo "DEMO_VERSION:               ${{ vars.DEMO_VERSION }}"
           echo "=========================================="
 
-  tune:
-    needs: show-settings
-    runs-on: ubuntu-latest
-    if: vars.RUN_TUNING == 'true'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-        with: {python-version: '3.10'}
-      - run: pip install -r requirements.txt
-      - run: |
-          echo "Starting tuning..."
-          python tune.py
-
   train:
-    needs: [show-settings, tune]
+    needs: [show-settings]
     runs-on: ubuntu-latest
-    if: |
-      vars.RUN_TRAINING_BEST_MODEL == 'true' && 
-      (needs.tune.result == 'success' || needs.tune.result == 'skipped')
+    if: vars.RUN_01_TRAINING_SCRIPT == 'true'
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-        with: {python-version: '3.10'}
-      - run: pip install -r requirements.txt
-      - run: |
-          echo "Starting training..."
-          python train_final.py
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ap-southeast-1
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+
+      - name: Build & Run Docker
+        run: |
+          echo "Build & Run Docker"
+          docker build -f Dockerfile.train -t tbclassifier .
+          docker run --rm \
+            -e DEMO_VERSION=$DEMO_VERSION \
+            -e MLFLOW_DEFAULT_ARTIFACT_ROOT=$MLFLOW_DEFAULT_ARTIFACT_ROOT \
+            tbclassifier
 
   deploy:
+    needs: [show-settings]
     runs-on: ubuntu-latest
-    if: vars.RUN_DEPLOY_BEST_MODEL == 'true'
+    if: vars.RUN_02_DEPLOY_SCRIPT == 'true'
+
     steps:
-      - uses: actions/checkout@v4  # Added: need checkout    
-      - name: Deploy
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ap-southeast-1
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+
+      - name: Login to ECR
         run: |
-          echo "Starting deployment..."
-          echo "Reason: ${{ github.event.inputs.reason || 'git-push' }}"
-          echo "Deploying to production..."
-          # python deploy.py
+          aws ecr get-login-password \
+          | docker login --username AWS \
+          --password-stdin ${{ secrets.AWS_ACCOUNT }}.dkr.ecr.ap-southeast-1.amazonaws.com
+
+      - name: Build inference image
+        run: |
+          docker build -f Dockerfile.inference -t tb-inference .
+
+      - name: Tag image
+        run: |
+          docker tag tb-inference:latest \
+          ${{ secrets.AWS_ACCOUNT }}.dkr.ecr.ap-southeast-1.amazonaws.com/tb-inference:latest
+
+      - name: Push image
+        run: |
+          docker push \
+          ${{ secrets.AWS_ACCOUNT }}.dkr.ecr.ap-southeast-1.amazonaws.com/tb-inference:latest          
+      
+      - name: Deploy ECS service
+        run: |
+          aws ecs update-service \
+            --cluster tb-cluster \
+            --service tb-service \
+            --force-new-deployment

@@ -11,16 +11,17 @@ import torch
 from pytorch_lightning.loggers import MLFlowLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 
-# mlflow.set_tracking_uri(f"sqlite:///{TRACKING_DB}" )
-# client = MlflowClient()
-# experiment = client.get_experiment_by_name("TBClassifier_tuning")
-# print(experiment)
+mlflow.set_tracking_uri(f"sqlite:///{TRACKING_DB}" )
+client = MlflowClient()
+experiment = client.get_experiment_by_name("TBClassifier_Staging")
+print(experiment)
 
-# runs = client.search_runs(
-#     experiment_ids=[experiment.experiment_id],
-#     order_by=["start_time DESC"]
-# )
+runs = client.search_runs(
+    experiment_ids=[experiment.experiment_id],
+    order_by=["start_time DESC"]
+)
 
+# print(runs)
 # print(f"Run ID: {runs[0].info.run_id}")
 # print(f"  Start time: {runs[0].info.start_time}")
 # print(f"  Status: {runs[0].info.status}")
@@ -28,46 +29,25 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 # print(f"  Params: {runs[0].data.params}")
 # print(f"  Artifact URI: {runs[0].info.artifact_uri}")
 
-# model = mlflow.pytorch.load_model(f"runs:/{runs[0].info.run_id}/model")
-# model.eval()
-
-# print("Training model loaded successfully!")    
-
-
 study = optuna.load_study(
     study_name="TBClassifier",
     storage=f"sqlite:///{STUDY_DB}"
 )
 
-best_params = study.best_params  
-
+best_params = study.best_params
+model = mlflow.pytorch.load_model(f"runs:/{runs[0].info.run_id}/model")
 datamodule = DataPipeline(
     dataset_dir=DATASET_PATH,
     batch_size=best_params['batch_size'],
     tuning = False
 )
 
-model = DenseNetClassifier(
-    learning_rate=best_params['learning_rate'],
-    dropout=best_params['dropout'],
-    weight_decay=best_params['weight_decay'],
-    tuning = False
-)
-
-checkpoint_callback = ModelCheckpoint(
-    monitor="train_loss",
-    save_top_k=1,
-    mode="min",
-    filename="best_model"
-)
-
 trainer = pl.Trainer(
     max_epochs=get_robust_median_epoch(study),
     accelerator='gpu' if torch.cuda.is_available() else 'cpu',
     devices=1,
-    enable_progress_bar=True,   
-    callbacks=[checkpoint_callback],
+    enable_progress_bar=True, 
     deterministic=True
 )
-
 trainer.test(model, datamodule)
+print("Training model loaded successfully!")    

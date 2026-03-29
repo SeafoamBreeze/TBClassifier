@@ -1,9 +1,10 @@
 .ipynb_checkpoints/
 dataset/
+src/dataset
 mlruns/
-mlflow/
-optuna_studies/
 1/
+2/
+lightning_logs/
 *.ckpt
 *.env
 *.pth

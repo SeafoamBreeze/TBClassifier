@@ -254,6 +254,5 @@ def get_robust_median_epoch(study):
             epochs.append(int(epoch))
 
         median = int(np.median(epochs))
-        mlflow.log_metric("Median Epochs", median)
 
     return median

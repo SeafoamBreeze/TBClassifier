@@ -6,27 +6,22 @@ from config import DATASET_PATH, STUDY_DB, TRACKING_DB
 import optuna
 import pytorch_lightning as pl
 import torch
-from pytorch_lightning.loggers import MLFlowLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 import os
-
 from src.data_pipeline.data_pipeline import DataPipeline
 from src.neural_network.densenet_classifier import DenseNetClassifier
 
-pl.seed_everything(42, workers=True)
-RUN_01_TRAINING_SCRIPT = os.environ.get("RUN_01_TRAINING_SCRIPT", "false").lower() == "true"
-# FIT_TEST_MODEL = os.environ.get("FIT_TEST_MODEL", "false").lower() == "true"      # S3
-FIT_TEST_MODEL = os.environ.get("FIT_TEST_MODEL", "true").lower() == "true"         # Local
+pl.seed_everything(42)
+DEMO_VERSION = os.environ.get("DEMO_VERSION", "false").lower() == "true"
 
 if __name__ == "__main__":
 
-    mlflow.set_experiment("TBClassifier_Staging")
-    # mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])            # To store in S3 
     mlflow.set_tracking_uri(f"sqlite:///{TRACKING_DB}")                     # To store locally
+    mlflow.set_experiment("TBClassifier_Staging")
 
     with mlflow.start_run():
 
-        # download_dataset_from_s3()
+        download_dataset_from_s3()
         # download_latest_optuna_study()
 
         study = optuna.load_study(
@@ -75,18 +70,18 @@ if __name__ == "__main__":
             deterministic=True
         )
 
-        if (FIT_TEST_MODEL):
-            print("Begin model fitting")
+        if not DEMO_VERSION:
+            print("Model Fitting")
             trainer.fit(model, datamodule)
             best_model = DenseNetClassifier.load_from_checkpoint(checkpoint_callback.best_model_path, map_location="cpu")
         else:
-            print("Skipping model fitting for demo")
+            print("Model Fitting - Skipped")
             best_model = model
-
-        print("Begin model testing")
+            
+        print("Model Testing")
         trainer.test(best_model, datamodule)
 
-        print("Uploading staging model to MLFLOW_ARTIFACT_ROOT in S3 as defined in CodeBuild ")
+        print("Uploading staging model")
         mlflow.pytorch.log_model(
             pytorch_model=best_model,
             artifact_path="model",
