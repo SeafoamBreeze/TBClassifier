@@ -22,12 +22,12 @@ if __name__ == "__main__":
     with mlflow.start_run():
 
         download_dataset_from_s3()
-        # download_latest_optuna_study()
+        download_latest_optuna_study()
 
-        study = optuna.load_study(
-            study_name="TBClassifier",
-            storage=f"sqlite:///{STUDY_DB}"
-        )
+        # study = optuna.load_study(
+        #     study_name="TBClassifier",
+        #     storage=f"sqlite:///{STUDY_DB}"
+        # )
 
         best_params = study.best_params
         print(f"Best Trial: {study.best_trial.number}")
@@ -77,7 +77,7 @@ if __name__ == "__main__":
         else:
             print("Model Fitting - Skipped")
             best_model = model
-            
+
         print("Model Testing")
         trainer.test(best_model, datamodule)
 

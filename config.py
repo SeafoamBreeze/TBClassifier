@@ -12,5 +12,5 @@ TRACKING_DB = MLFLOW_TRACKING_DIR/"tracking.db"
 STUDY_DB = OPTUNA_DIR/"optuna_study.db"
 S3_BUCKET = "tbclassifier"
 S3_DATASET_PATH = Path("dataset/images")
-S3_PREFIX_OPTUNA_STUDIES = "tuning-artifact/latest/optuna_studies"
+S3_PREFIX_OPTUNA_STUDIES = "optuna_studies"
 S3_PREFIX_PRODUCTION_MODEL = "training-artifacts/production/model"

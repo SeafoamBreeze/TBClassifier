@@ -1,5 +1,4 @@
 .ipynb_checkpoints/
-dataset/
 src/dataset
 mlruns/
 1/
@@ -7,4 +6,3 @@ mlruns/
 lightning_logs/
 *.ckpt
 *.env
-*.pth
