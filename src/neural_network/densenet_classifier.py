@@ -239,5 +239,5 @@ class DenseNetClassifier(pl.LightningModule):
 
         plt.title("Class-wise Metrics")
         plt.savefig("class_metrics.png", dpi=300, bbox_inches='tight')
-        mlflow.log_figure(fig, "Class-wise Metrics")
+        mlflow.log_figure(fig, "class_metrics.png")
         plt.close()
