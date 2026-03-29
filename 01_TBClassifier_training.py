@@ -13,10 +13,12 @@ from src.neural_network.densenet_classifier import DenseNetClassifier
 
 pl.seed_everything(42)
 DEMO_VERSION = os.environ.get("DEMO_VERSION", "false").lower() == "true"
+ARTIFACT_ROOT = os.getenv("MLFLOW_DEFAULT_ARTIFACT_ROOT", "s3://tbclassifier/mlflow")
 
 if __name__ == "__main__":
 
-    mlflow.set_tracking_uri(f"sqlite:///{TRACKING_DB}")                     # To store locally
+    mlflow.set_tracking_uri(f"sqlite:///{TRACKING_DB}")
+    mlflow.create_experiment("TBClassifier_Staging", artifact_location=ARTIFACT_ROOT)
     mlflow.set_experiment("TBClassifier_Staging")
 
     with mlflow.start_run():
