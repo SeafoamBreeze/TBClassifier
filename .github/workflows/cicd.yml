@@ -55,7 +55,7 @@ jobs:
       - name: Build & Run Docker
         run: |
           echo "Build & Run Docker"
-          docker build -f Dockerfile.train -t tbclassifier .
+          docker build -f dockerfile.train -t tbclassifier .
           docker run --rm \
             -e DEMO_VERSION=$DEMO_VERSION \
             -e MLFLOW_DEFAULT_ARTIFACT_ROOT=$MLFLOW_DEFAULT_ARTIFACT_ROOT \
@@ -83,7 +83,7 @@ jobs:
 
       - name: Build inference image
         run: |
-          docker build -f Dockerfile.inference -t tb-inference .
+          docker build -f dockerfile.inference -t tb-inference .
 
       - name: Tag image
         run: |
