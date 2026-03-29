@@ -51,13 +51,15 @@ def download_from_s3(bucket, prefix, local_dir):
             except Exception as e:
                 print(f"download_from_s3(): Download failed: {e}")
 
+        print(f"download_from_s3(): End")
+
 def verify_item_count(dataset_path, ext_dict):
 
     if not dataset_path.exists():
-        print(f"Path not found: {dataset_path}")
+        print(f"verify_item_count(): Path not found: {dataset_path}")
         return
     
-    print(f"Looking in {dataset_path}")
+    print(f"verify_item_count(): Looking in {dataset_path}")
     for class_dir in dataset_path.iterdir():
         if class_dir.is_dir():
             count = sum(
@@ -65,3 +67,4 @@ def verify_item_count(dataset_path, ext_dict):
                 if f.suffix.lower() in ext_dict
             )
             print(f"{class_dir.name}: {count}")
+    print(f"verify_item_count(): End")
