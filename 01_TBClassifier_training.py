@@ -24,10 +24,10 @@ if __name__ == "__main__":
         download_dataset_from_s3()
         download_latest_optuna_study()
 
-        # study = optuna.load_study(
-        #     study_name="TBClassifier",
-        #     storage=f"sqlite:///{STUDY_DB}"
-        # )
+        study = optuna.load_study(
+            study_name="TBClassifier",
+            storage=f"sqlite:///{STUDY_DB}"
+        )
 
         best_params = study.best_params
         print(f"Best Trial: {study.best_trial.number}")
