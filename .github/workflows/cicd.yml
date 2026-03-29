@@ -28,7 +28,7 @@ jobs:
           echo "PIPELINE SETTINGS"
           echo "=========================================="
           echo "Trigger:                    ${{ github.event_name }}"
-          echo "Reason:                     ${{ github.event.inputs.reason || "N/A" }}"
+          echo "Reason:                     ${{ github.event.inputs.reason || 'N/A' }}"
           echo "RUN_01_TRAINING_SCRIPT:     ${{ vars.RUN_01_TRAINING_SCRIPT }}"
           echo "RUN_02_DEPLOY_SCRIPT:       ${{ vars.RUN_02_DEPLOY_SCRIPT }}"
           echo "RUN_02_DEPLOY_SCRIPT:       ${{ vars.MLFLOW_DEFAULT_ARTIFACT_ROOT }}"
