@@ -4,7 +4,6 @@ import torch
 
 from utils.s3_utils import download_production_model
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global model, model_version
