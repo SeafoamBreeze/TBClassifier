@@ -9,6 +9,7 @@ env:
   RUN_02_DEPLOY_SCRIPT:           ${{ vars.RUN_02_DEPLOY_SCRIPT }}
   MLFLOW_DEFAULT_ARTIFACT_ROOT:   ${{ vars.MLFLOW_DEFAULT_ARTIFACT_ROOT }}
   DEMO_VERSION:                   ${{ vars.DEMO_VERSION }}
+
 on: 
   push:
     branches: [ main ]
@@ -87,15 +88,12 @@ jobs:
 
       - name: Build inference image
         run: |
-          docker build -f dockerfile.inference -t tb-inference .
+          docker build -f inference/dockerfile.inference -t tb-inference .
 
-      - name: Tag image
+      - name: Tag image & Push image
         run: |
           docker tag tb-inference:latest \
           ${{ secrets.AWS_ACCOUNT }}.dkr.ecr.ap-southeast-1.amazonaws.com/tb-inference:latest
-
-      - name: Push image
-        run: |
           docker push \
           ${{ secrets.AWS_ACCOUNT }}.dkr.ecr.ap-southeast-1.amazonaws.com/tb-inference:latest          
       

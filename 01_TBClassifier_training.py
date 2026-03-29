@@ -13,7 +13,7 @@ from src.neural_network.densenet_classifier import DenseNetClassifier
 
 pl.seed_everything(42)
 DEMO_VERSION = os.environ.get("DEMO_VERSION", "false").lower() == "true"
-ARTIFACT_ROOT = os.getenv("MLFLOW_DEFAULT_ARTIFACT_ROOT", "s3://tbclassifier/mlflow")
+ARTIFACT_ROOT = os.environ.get("MLFLOW_DEFAULT_ARTIFACT_ROOT", "s3://tbclassifier/mlflow")
 
 if __name__ == "__main__":
 

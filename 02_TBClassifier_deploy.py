@@ -1,14 +1,13 @@
 from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
 import torch
-
-from utils.s3_utils import download_production_model
+from utils.s3_utils import download_model
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global model, model_version
     try:
-        model_path = await download_production_model()
+        model_path = await download_model()
         device = "cuda" if torch.cuda.is_available() else "cpu"
         model = torch.load(model_path, map_location=device, weights_only=True)
         model.eval().to(device)

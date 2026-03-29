@@ -11,7 +11,7 @@ import torch
 from pytorch_lightning.loggers import MLFlowLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 
-mlflow.set_tracking_uri(f"sqlite:///{TRACKING_DB}" )
+# mlflow.set_tracking_uri(f"sqlite:///{TRACKING_DB}" )
 client = MlflowClient()
 experiment = client.get_experiment_by_name("TBClassifier_Staging")
 print(experiment)
