@@ -88,14 +88,14 @@ jobs:
 
       - name: Build inference image
         run: |
-          docker build -f dockerfile.inference -t tb-inference .
+          docker build -f dockerfile.inference -t tbclassifier-inference .
 
       - name: Tag image & Push image
         run: |
-          docker tag tb-inference:latest \
-          ${{ secrets.AWS_ACCOUNT }}.dkr.ecr.ap-southeast-1.amazonaws.com/tb-inference:latest
+          docker tag tbclassifier-inference:latest \
+          ${{ secrets.AWS_ACCOUNT }}.dkr.ecr.ap-southeast-1.amazonaws.com/tbclassifier-inference:latest
           docker push \
-          ${{ secrets.AWS_ACCOUNT }}.dkr.ecr.ap-southeast-1.amazonaws.com/tb-inference:latest          
+          ${{ secrets.AWS_ACCOUNT }}.dkr.ecr.ap-southeast-1.amazonaws.com/tbclassifier-inference:latest          
       
       - name: Deploy ECS service
         run: |
