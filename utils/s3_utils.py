@@ -1,11 +1,8 @@
 import os
 import boto3
-from config import S3_BUCKET, DATASET_PATH, OPTUNA_DIR, S3_PREFIX_PRODUCTION_MODEL, S3_PREFIX_OPTUNA_STUDIES
+from config import S3_BUCKET, DATASET_PATH, OPTUNA_DIR, S3_PREFIX_OPTUNA_STUDIES
 from pathlib import Path
-
-def download_production_model():
-    download_from_s3(bucket=S3_BUCKET, prefix=S3_PREFIX_PRODUCTION_MODEL, local_dir="")
-    verify_item_count(Path(S3_PREFIX_PRODUCTION_MODEL), {".pth"})
+import tempfile
 
 def upload_file_to_s3(file_name, s3_bucket, s3_destination):
     s3 = boto3.client("s3")
@@ -68,3 +65,93 @@ def verify_item_count(dataset_path, ext_dict):
             )
             print(f"{class_dir.name}: {count}")
     print(f"verify_item_count(): End")
+
+
+from dotenv import load_dotenv
+load_dotenv()
+
+USE_PRODUCTION_MODEL = os.environ.get("USE_PRODUCTION_MODEL", "true").lower() == "true"
+# S3_PREFIX_PRODUCTION_MODEL = "production/model"
+S3_PREFIX_PRODUCTION_MODEL = "build-artifacts/b09a4f9cbda74475aeea29411090898e/artifacts/model"
+S3_PREFIX_BUILD_ARTIFACTS = "build-artifacts"
+
+def get_latest_model_s3_prefix(bucket_name: str, parent_prefix: str) -> str:
+
+    # TODO: Uncomment this for deployment
+    # s3 = boto3.client("s3")
+    s3 = boto3.client(
+        's3',
+        aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+        aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+        region_name=os.getenv('AWS_REGION', 'us-east-1')
+    )
+
+    paginator = s3.get_paginator("list_objects_v2")
+    result = paginator.paginate(
+        Bucket=bucket_name,
+        Prefix=parent_prefix,
+        Delimiter="/"
+    )
+
+    prefixes = []
+    for page in result:
+        if "CommonPrefixes" in page:
+            for p in page["CommonPrefixes"]:
+                sub_prefix = p["Prefix"]
+                objs = s3.list_objects_v2(Bucket=bucket_name, Prefix=sub_prefix)
+                if "Contents" in objs:
+                    latest_obj = max(objs["Contents"], key=lambda x: x["LastModified"])
+                    prefixes.append((sub_prefix, latest_obj["LastModified"]))
+    
+    if not prefixes:
+        return None
+
+    latest_prefix = max(prefixes, key=lambda x: x[1])[0]
+    return latest_prefix + "/artifacts/model"
+
+def download_model_from_s3() -> str:
+    """
+    Download model artifacts from S3 to local temp directory.
+    Returns local path to model.
+    """
+
+    s3 = boto3.client("s3")
+
+    temp_dir = tempfile.mkdtemp(prefix="model_")
+    local_model_path = Path(temp_dir) / "model"
+    
+    # List all objects in model prefix
+    paginator = s3.get_paginator("list_objects_v2")
+    
+    downloaded_files = []
+
+    if USE_PRODUCTION_MODEL:
+        print("Using production model")
+        model_s3_prefix = S3_PREFIX_PRODUCTION_MODEL
+    else:
+        print("Using latest training model")
+        model_s3_prefix = get_latest_model_s3_prefix(S3_BUCKET, S3_PREFIX_BUILD_ARTIFACTS)
+
+    for page in paginator.paginate(Bucket=S3_BUCKET, Prefix=model_s3_prefix):
+        for obj in page.get("Contents", []):
+            s3_key = obj["Key"]
+            if s3_key.endswith("/"):
+                continue
+
+            relative_path = s3_key.replace(model_s3_prefix, "").lstrip("/")
+            local_file = local_model_path / relative_path
+            local_file.parent.mkdir(parents=True, exist_ok=True)
+
+            try:
+                print(f"  Downloading from {relative_path}")
+                s3.download_file(S3_BUCKET, s3_key, str(local_file))
+                downloaded_files.append(str(local_file))
+            except Exception as e:
+                print(f"  Failed to download {s3_key}: {e}")
+                raise
+    
+    if not downloaded_files:
+        raise RuntimeError(f"No model files found at s3://{S3_BUCKET}/{model_s3_prefix}")
+    
+    print(f"Model downloaded to: {local_model_path}")
+    return str(local_model_path)

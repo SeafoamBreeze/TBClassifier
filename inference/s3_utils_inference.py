@@ -4,14 +4,26 @@ import tempfile
 from pathlib import Path
 from datetime import datetime
 
+from dotenv import load_dotenv
+load_dotenv()
+
 S3_BUCKET = os.environ.get("S3_BUCKET", "tbclassifier")
 USE_PRODUCTION_MODEL = os.environ.get("USE_PRODUCTION_MODEL", "true").lower() == "true"
-S3_PREFIX_PRODUCTION_MODEL = "production/model"
+# S3_PREFIX_PRODUCTION_MODEL = "production/model"
+S3_PREFIX_PRODUCTION_MODEL = "build-artifacts/b09a4f9cbda74475aeea29411090898e/artifacts/model"
 S3_PREFIX_BUILD_ARTIFACTS = "build-artifacts"
 
 def get_latest_model_s3_prefix(bucket_name: str, parent_prefix: str) -> str:
 
-    s3 = boto3.client("s3")
+    # TODO: Uncomment this for deployment
+    # s3 = boto3.client("s3")
+    s3 = boto3.client(
+        's3',
+        aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+        aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+        region_name=os.getenv('AWS_REGION', 'us-east-1')
+    )
+
     paginator = s3.get_paginator("list_objects_v2")
     result = paginator.paginate(
         Bucket=bucket_name,
@@ -23,9 +35,7 @@ def get_latest_model_s3_prefix(bucket_name: str, parent_prefix: str) -> str:
     for page in result:
         if "CommonPrefixes" in page:
             for p in page["CommonPrefixes"]:
-                # store prefix and LastModified of objects in that prefix
                 sub_prefix = p["Prefix"]
-                # get the latest object inside this sub-prefix
                 objs = s3.list_objects_v2(Bucket=bucket_name, Prefix=sub_prefix)
                 if "Contents" in objs:
                     latest_obj = max(objs["Contents"], key=lambda x: x["LastModified"])
@@ -34,9 +44,8 @@ def get_latest_model_s3_prefix(bucket_name: str, parent_prefix: str) -> str:
     if not prefixes:
         return None
 
-    # sort by LastModified descending
     latest_prefix = max(prefixes, key=lambda x: x[1])[0]
-    return latest_prefix + "/artifacts/model/data/"
+    return latest_prefix + "/artifacts/model"
 
 def download_model_from_s3() -> str:
     """
@@ -45,8 +54,7 @@ def download_model_from_s3() -> str:
     """
 
     s3 = boto3.client("s3")
-    
-    # Create temp directory for model
+
     temp_dir = tempfile.mkdtemp(prefix="model_")
     local_model_path = Path(temp_dir) / "model"
     
@@ -87,9 +95,3 @@ def download_model_from_s3() -> str:
     
     print(f"Model downloaded to: {local_model_path}")
     return str(local_model_path)
-
-# Example usage
-bucket = "my-bucket"
-parent = "dataset/images/"
-latest = get_latest_s3_prefix(bucket, parent)
-print("Latest prefix:", latest)
