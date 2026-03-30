@@ -4,6 +4,16 @@ from config import S3_BUCKET, DATASET_PATH, OPTUNA_DIR, S3_PREFIX_OPTUNA_STUDIES
 from pathlib import Path
 import tempfile
 
+
+# from dotenv import load_dotenv
+# load_dotenv()
+
+USE_PRODUCTION_MODEL = os.environ.get("USE_PRODUCTION_MODEL", "true").lower() == "true"
+# S3_PREFIX_PRODUCTION_MODEL = "production/model"
+S3_PREFIX_PRODUCTION_MODEL = "build-artifacts/b09a4f9cbda74475aeea29411090898e/artifacts/model"
+S3_PREFIX_BUILD_ARTIFACTS = "build-artifacts"
+
+
 def upload_file_to_s3(file_name, s3_bucket, s3_destination):
     s3 = boto3.client("s3")
     try:    
@@ -66,14 +76,6 @@ def verify_item_count(dataset_path, ext_dict):
             print(f"{class_dir.name}: {count}")
     print(f"verify_item_count(): End")
 
-
-from dotenv import load_dotenv
-load_dotenv()
-
-USE_PRODUCTION_MODEL = os.environ.get("USE_PRODUCTION_MODEL", "true").lower() == "true"
-# S3_PREFIX_PRODUCTION_MODEL = "production/model"
-S3_PREFIX_PRODUCTION_MODEL = "build-artifacts/b09a4f9cbda74475aeea29411090898e/artifacts/model"
-S3_PREFIX_BUILD_ARTIFACTS = "build-artifacts"
 
 def get_latest_model_s3_prefix(bucket_name: str, parent_prefix: str) -> str:
 
