@@ -1,18 +1,13 @@
 import os
 import boto3
-from config import S3_BUCKET, DATASET_PATH, OPTUNA_DIR, S3_PREFIX_OPTUNA_STUDIES
+from config import S3_BUCKET, DATASET_PATH, OPTUNA_DIR, S3_PREFIX_OPTUNA_STUDIES, S3_PREFIX_PRODUCTION_MODEL, S3_PREFIX_BUILD_ARTIFACTS
 from pathlib import Path
 import tempfile
-
 
 # from dotenv import load_dotenv
 # load_dotenv()
 
 USE_PRODUCTION_MODEL = os.environ.get("USE_PRODUCTION_MODEL", "true").lower() == "true"
-# S3_PREFIX_PRODUCTION_MODEL = "production/model"
-S3_PREFIX_PRODUCTION_MODEL = "build-artifacts/b09a4f9cbda74475aeea29411090898e/artifacts/model"
-S3_PREFIX_BUILD_ARTIFACTS = "build-artifacts"
-
 
 def upload_file_to_s3(file_name, s3_bucket, s3_destination):
     s3 = boto3.client("s3")
@@ -79,15 +74,7 @@ def verify_item_count(dataset_path, ext_dict):
 
 def get_latest_model_s3_prefix(bucket_name: str, parent_prefix: str) -> str:
 
-    # TODO: Uncomment this for deployment
-    # s3 = boto3.client("s3")
-    s3 = boto3.client(
-        's3',
-        aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-        aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
-        region_name=os.getenv('AWS_REGION', 'us-east-1')
-    )
-
+    s3 = boto3.client("s3")
     paginator = s3.get_paginator("list_objects_v2")
     result = paginator.paginate(
         Bucket=bucket_name,
@@ -112,17 +99,11 @@ def get_latest_model_s3_prefix(bucket_name: str, parent_prefix: str) -> str:
     return latest_prefix + "/artifacts/model"
 
 def download_model_from_s3() -> str:
-    """
-    Download model artifacts from S3 to local temp directory.
-    Returns local path to model.
-    """
-
-    s3 = boto3.client("s3")
 
     temp_dir = tempfile.mkdtemp(prefix="model_")
     local_model_path = Path(temp_dir) / "model"
-    
-    # List all objects in model prefix
+
+    s3 = boto3.client("s3")
     paginator = s3.get_paginator("list_objects_v2")
     
     downloaded_files = []
