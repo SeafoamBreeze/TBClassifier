@@ -100,6 +100,6 @@ jobs:
       - name: Deploy ECS service
         run: |
           aws ecs update-service \
-            --cluster tb-cluster \
-            --service tb-service \
+            --cluster "default" \
+            --service "tbclassifier-inference-a0a6" \
             --force-new-deployment
