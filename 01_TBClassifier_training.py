@@ -1,5 +1,5 @@
 from utils.optuna_utils import get_robust_median_epoch
-from utils.s3_utils import download_dataset_from_s3, download_latest_optuna_study  
+from utils.s3_utils import download_dataset_from_s3, download_latest_optuna_study, download_model_from_s3, find_checkpoint_file  
 import mlflow
 import mlflow.pytorch
 from config import DATASET_PATH, STUDY_DB, TRACKING_DB
@@ -25,6 +25,8 @@ if __name__ == "__main__":
 
         download_dataset_from_s3()
         download_latest_optuna_study()
+        model_path = download_model_from_s3()
+        ckpt_path = find_checkpoint_file(model_path) 
 
         study = optuna.load_study(
             study_name="TBClassifier",
@@ -49,18 +51,31 @@ if __name__ == "__main__":
             tuning = False
         )
 
-        model = DenseNetClassifier(
-            learning_rate=best_params['learning_rate'],
-            dropout=best_params['dropout'],
-            weight_decay=best_params['weight_decay'],
-            tuning = False
-        )
+        if ckpt_path:
+            print(f"Loading checkpoint from: {ckpt_path}")
+            model = DenseNetClassifier.load_from_checkpoint(
+                str(ckpt_path),
+                map_location="cpu",
+                learning_rate=best_params['learning_rate'],
+                dropout=best_params['dropout'],
+                weight_decay=best_params['weight_decay'],
+                tuning=False
+            )
+        else:
+            print("No checkpoint found, initializing fresh model")
+            model = DenseNetClassifier(
+                learning_rate=best_params['learning_rate'],
+                dropout=best_params['dropout'],
+                weight_decay=best_params['weight_decay'],
+                tuning = False
+            )
         
         checkpoint_callback = ModelCheckpoint(
             monitor="train_loss",
             save_top_k=1,
             mode="min",
-            filename="best_model"
+            filename="best_model",
+            save_on_train_epoch_end=True
         )
         
         trainer = pl.Trainer(
@@ -79,6 +94,9 @@ if __name__ == "__main__":
         else:
             print("Model Fitting - Skipped")
             best_model = model
+
+        print("Uploading checkpoint")
+        mlflow.log_artifact(checkpoint_callback.best_model_path, artifact_path="model")
 
         print("Model Testing")
         trainer.test(best_model, datamodule)

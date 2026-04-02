@@ -138,3 +138,17 @@ def download_model_from_s3() -> str:
     
     print(f"Model downloaded to: {local_model_path}")
     return str(local_model_path)
+
+def find_checkpoint_file(model_dir):
+
+    if not model_dir.exists():
+        return None
+    
+    patterns = ["**/*.ckpt",]
+    
+    for pattern in patterns:
+        matches = list(model_dir.glob(pattern))
+        if matches:
+            return max(matches, key=lambda p: p.stat().st_mtime)
+    
+    return None    
