@@ -90,13 +90,13 @@ if __name__ == "__main__":
         if not DEMO_VERSION:
             print("Model Fitting")
             trainer.fit(model, datamodule)
-            best_model = DenseNetClassifier.load_from_checkpoint(checkpoint_callback.best_model_path, map_location="cpu")
+            best_model = DenseNetClassifier.load_from_checkpoint(checkpoint_callback.best_model_path, map_location="cpu")            
+            print("Uploading checkpoint")
+            mlflow.log_artifact(checkpoint_callback.best_model_path, artifact_path="model")
         else:
             print("Model Fitting - Skipped")
             best_model = model
 
-        print("Uploading checkpoint")
-        mlflow.log_artifact(checkpoint_callback.best_model_path, artifact_path="model")
 
         print("Model Testing")
         trainer.test(best_model, datamodule)
