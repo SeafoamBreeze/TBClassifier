@@ -141,6 +141,8 @@ def download_model_from_s3() -> str:
 
 def find_checkpoint_file(model_dir):
 
+    model_dir = Path(model_dir)
+
     if not model_dir.exists():
         return None
     
