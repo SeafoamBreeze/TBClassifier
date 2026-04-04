@@ -44,14 +44,23 @@ def objective(trial):
             'test_acc': [],
         }
 
-        for fold_idx in range(5):
-            print(f"\n--- Fold {fold_idx + 1}/5 ---")
+        experiment = mlflow.get_experiment_by_name("TBClassifier_adversarial_tuning")
+        experiment_name = experiment.name
+        if experiment_name == "TBClassifier_adversarial_tuning":
+            print("Adversarial tuning")
+            splits = 2
+        else:
+            print("Normal tuning")
+            splits = 5
+
+        for fold_idx in range(splits):
+            print(f"\n--- Fold {fold_idx + 1}/{splits} ---")
 
             datamodule = DataPipeline(
                 dataset_dir=DATASET_PATH,
                 batch_size=hyperparams['batch_size'],
                 fold_idx=fold_idx,
-                n_splits=5,
+                n_splits=splits,
                 tuning = True
             )
 
@@ -59,7 +68,8 @@ def objective(trial):
                 learning_rate=hyperparams['learning_rate'],
                 dropout=hyperparams['dropout'],
                 weight_decay=hyperparams['weight_decay'],
-                tuning = True
+                tuning = True,
+                adversarial_training=True
             )
 
             early_stop = EarlyStopping(
@@ -78,7 +88,7 @@ def objective(trial):
                 callbacks=[early_stop, pruning],
                 enable_progress_bar=True,
                 logger=MLFlowLogger(
-                    experiment_name="TBClassifier_tuning",
+                    experiment_name=f"{experiment_name}",
                     tracking_uri=f"sqlite:///{TRACKING_DB}"
                 ),
                 deterministic=True
@@ -143,14 +153,13 @@ def objective(trial):
 
         return mean_val_mcc
     
-def run_optimization(n_trials, timeout, n_splits, max_epochs_per_fold):
+def run_optimization(n_trials, timeout, max_epochs_per_fold):
 
     print(f"\n{'='*70}")
     print("OPTUNA OPTIMIZATION SETUP")
     print(f"{'='*70}")
     print(f"run_optimization(): Trials: {n_trials}")
     print(f"run_optimization(): Timeout: {timeout}s ({timeout/3600:.1f} hours)")
-    print(f"run_optimization(): CV Folds: {n_splits}")
     print(f"run_optimization(): Max epochs per fold: {max_epochs_per_fold}")
     print(f"run_optimization(): Sampler: TPE (n_startup={5}, n_candidates={24})")
     print(f"run_optimization(): Pruner: Hyperband (min_resource={3}, max_resource={max_epochs_per_fold}, reduction_factor={3})")
@@ -170,6 +179,18 @@ def run_optimization(n_trials, timeout, n_splits, max_epochs_per_fold):
         ),
         load_if_exists=True
     )
+
+    experiment = mlflow.get_experiment_by_name("TBClassifier_adversarial_tuning")
+    if experiment.name == "TBClassifier_adversarial_tuning" and len(study.trials) == 0:
+        print("Retrieving best params for adversarial training")
+        # Production hyperparameters
+        best_params = {
+            "learning_rate": 0.00015514919971479425,
+            "dropout": 0.21865652665653285,
+            "weight_decay": 2.485139716480054e-05,
+            "batch_size": 32
+        }
+        study.enqueue_trial(best_params)
 
      # Run optimization
     print(f"\n{'='*70}")

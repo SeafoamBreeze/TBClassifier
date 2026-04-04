@@ -15,7 +15,7 @@ seaborn==0.13.2
 torch==2.3.1
 torchvision==0.18.1
 pytorch-lightning==2.3.3
-grad-cam
+grad-cam==1.4.8
 
 mlflow==2.12.1
 boto3==1.42.71
@@ -25,3 +25,7 @@ pydantic==2.9.0
 rich==14.2.0
 pyyaml==6.0.3
 zstandard==0.24.0
+
+python-magic==0.4.27
+kornia==0.7.2
+PyWavelets==1.8.0

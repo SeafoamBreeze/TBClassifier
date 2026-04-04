@@ -10,8 +10,7 @@ mlflow/
 mlruns/
 optuna_studies/
 optuna/
-dataset/
-1/
+src/dataset/
 *.json
 *.ipynb
 *.db

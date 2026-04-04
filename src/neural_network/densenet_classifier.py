@@ -12,7 +12,9 @@ import pandas as pd
 
 class DenseNetClassifier(pl.LightningModule):
 
-    def __init__(self, learning_rate, dropout, weight_decay, tuning):
+    def __init__(self, learning_rate, dropout, weight_decay, tuning, 
+                 adversarial_training=False, epsilon=8/255, alpha=2/255, 
+                 attack_iters=1, adv_weight=0.5):
 
         super().__init__()
         self.save_hyperparameters()
@@ -40,18 +42,83 @@ class DenseNetClassifier(pl.LightningModule):
     def forward(self, x):
         return self.backbone(x)
 
+    def generate_adversarial_examples(self, x, y):
+        """
+        Generate adversarial examples using PGD (Projected Gradient Descent)
+        With attack_iters=1, this becomes FGSM (Fast Gradient Sign Method)
+        """
+        x_adv = x.detach().clone()
+        x_adv.requires_grad = True
+        
+        # Random initialization for PGD (optional, helps with diversity)
+        if self.hparams.attack_iters > 1:
+            x_adv = x_adv + torch.empty_like(x_adv).uniform_(-self.hparams.epsilon, self.hparams.epsilon)
+            x_adv = torch.clamp(x_adv, 0, 1).detach()
+            x_adv.requires_grad = True
+
+        for _ in range(self.hparams.attack_iters):
+            x_adv.requires_grad = True
+            
+            # Forward pass
+            logits = self(x_adv)
+            loss = F.cross_entropy(logits, y, weight=self.class_weights)
+            
+            # Backward pass to get gradients
+            self.zero_grad()
+            loss.backward()
+            
+            # Get gradient sign and update adversarial example
+            grad_sign = x_adv.grad.data.sign()
+            x_adv = x_adv.detach() + self.hparams.alpha * grad_sign
+            
+            # Project back to epsilon ball around original x
+            perturbation = torch.clamp(x_adv - x, -self.hparams.epsilon, self.hparams.epsilon)
+            x_adv = torch.clamp(x + perturbation, 0, 1).detach()
+        
+        return x_adv
+
     def training_step(self, batch, batch_idx):
 
         x, y = batch
         logits = self(x)
 
-        preds = torch.argmax(logits, dim=1)
-        acc = (preds == y).float().mean()
-        loss = F.cross_entropy(logits, y, weight=self.class_weights)
+        # === Clean Training ===
+        logits_clean = self(x)
+        loss_clean = F.cross_entropy(logits_clean, y, weight=self.class_weights)
+        
+        # Calculate clean accuracy
+        preds_clean = torch.argmax(logits_clean, dim=1)
+        acc_clean = (preds_clean == y).float().mean()
+        
+        # === Adversarial Training (if enabled) ===
+        if self.hparams.adversarial_training:
+            # Generate adversarial examples
+            x_adv = self.generate_adversarial_examples(x, y)
+            
+            # Forward pass on adversarial examples
+            logits_adv = self(x_adv)
+            loss_adv = F.cross_entropy(logits_adv, y, weight=self.class_weights)
+            
+            # Calculate adversarial accuracy
+            preds_adv = torch.argmax(logits_adv, dim=1)
+            acc_adv = (preds_adv == y).float().mean()
+            
+            # Combined loss: weighted sum of clean and adversarial loss
+            loss = (1 - self.hparams.adv_weight) * loss_clean + self.hparams.adv_weight * loss_adv
+            
+            # Log adversarial metrics
+            self.log("train_loss_adv", loss_adv, prog_bar=True)
+            self.log("train_acc_adv", acc_adv, prog_bar=True)
+        else:
+            loss = loss_clean
 
-        self.log("train_loss", loss)
-        mlflow.log_metric("train_acc", acc.item(), step=self.global_step)
+        self.log("train_loss", loss, prog_bar=True)
+        self.log("train_loss_clean", loss_clean, prog_bar=True)
+        self.log("train_acc_clean", acc_clean, prog_bar=True)
+        mlflow.log_metric("train_acc", acc_clean.item(), step=self.global_step)
         mlflow.log_metric("train_loss", loss.item(), step=self.global_step)
+        if self.hparams.adversarial_training:
+            mlflow.log_metric("train_acc_adv", acc_adv.item(), step=self.global_step)
 
         return loss
 
