@@ -6,3 +6,4 @@ mlruns/
 lightning_logs/
 *.ckpt
 *.env
+/mlflow

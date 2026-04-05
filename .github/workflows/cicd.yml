@@ -70,6 +70,7 @@ jobs:
     needs: [show-settings]
     runs-on: ubuntu-latest
     if: vars.RUN_02_DEPLOY_SCRIPT == 'true'
+    environment: PRODUCTION
 
     steps:
       - uses: actions/checkout@v4

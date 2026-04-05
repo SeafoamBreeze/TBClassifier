@@ -20,6 +20,7 @@ from utils.adversarial_attack_utils import fgsm_attack, apply_mitigation, tensor
 import torch.nn.functional as F
 import threading
 import magic
+import uuid
 
 _model_lock = threading.Lock()
 _model = None
@@ -57,6 +58,12 @@ class PredictionResponse(BaseModel):
     filename: str
     original: OriginalResult
     variants: List[VariantResult]
+
+class OutputResponse(BaseModel):
+    case_id: str
+    classification_label: str
+    confidence_score: float
+    grad_cam_image: str
 
 def load_model():
 
@@ -97,7 +104,7 @@ def preprocess_image(image_bytes):
     return standardized_tensor.to(_device), normalized_np, raw_image_tensor.to(_device)
 
 def get_class_name(prediction_idx):
-    classes = ["Healthy", "SickNonTB", "TB"]
+    classes = ["Healthy", "Others (Not Tuberculosis)", "Tuberculosis"]
     return classes[prediction_idx]
 
 @asynccontextmanager
@@ -193,7 +200,7 @@ async def validate_file_secure(file: UploadFile) -> bytes:
     
     return contents
 
-@app.post("/predict", response_model=PredictionResponse)
+@app.post("/predict-adverserial", response_model=PredictionResponse)
 async def predict(
     mitigation_method: str = Form(...), 
     file: UploadFile = File(..., description="X-ray image to analyze (will be attacked)"),
@@ -394,6 +401,60 @@ async def predict(
         original=original_result,
         variants=variants
     )   
+
+@app.post("/predict", response_model=OutputResponse)
+async def predict(
+    xray_image_base64: str = Form(..., description="X-ray image in base64"),
+    patient_metadata: Optional[str] = Form(None, description="Optional JSON string of patient metadata")
+):
+    # Generate a unique case ID
+    unique_id = str(uuid.uuid4())
+    print(f"Generated case_id: {unique_id}")
+
+    # Decode the base64 image and preprocess
+    try:
+        image_bytes = base64.b64decode(xray_image_base64)
+        standardized_tensor, normalized_np, raw_image_tensor = preprocess_image(image_bytes)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Image preprocessing failed: {str(e)}")
+
+    # Clone tensor for perturbation/prediction
+    perturbed_preprocessed = standardized_tensor.clone()
+
+    # Make prediction
+    with torch.no_grad():
+        outputs = _model(perturbed_preprocessed)
+        probs = torch.softmax(outputs, dim=1)
+
+    prob_values = probs.cpu().numpy()[0]
+    pred_idx = int(np.argmax(prob_values))
+    probability = float(prob_values[pred_idx])
+
+    # Generate Grad-CAM
+    try:
+        targets = [ClassifierOutputTarget(pred_idx)]
+        grayscale_cam = _gradcam(input_tensor=perturbed_preprocessed, targets=targets)[0, :]
+        heatmap = show_cam_on_image(normalized_np, grayscale_cam, use_rgb=True)
+    except Exception as e:
+        print(f"Grad-CAM failed: {e}")
+        heatmap = (normalized_np * 255).astype(np.uint8)
+
+    # Convert heatmap to base64
+    heatmap_pil = Image.fromarray(heatmap)
+    buffered = io.BytesIO()
+    heatmap_pil.save(buffered, format="PNG")
+    grad_cam_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+
+    classification_label = get_class_name(pred_idx)
+
+    response = OutputResponse(
+        case_id=unique_id,
+        classification_label=classification_label,
+        confidence_score=probability,
+        grad_cam_image=grad_cam_base64
+    )
+
+    return response
 
 def get_target_layer(model):
     # for name, module in model.named_modules():

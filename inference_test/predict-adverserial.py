@@ -13,7 +13,7 @@ def call_api_and_generate_html(
 ):
     """Call API and generate HTML report with all images."""
     
-    url = "http://localhost:8000/predict"
+    url = "http://localhost:8000/predict-adverserial"
     data = {"mitigation_method": mitigation_method}
     
     with open(image_path, "rb") as f:
