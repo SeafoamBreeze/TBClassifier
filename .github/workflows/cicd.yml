@@ -101,6 +101,6 @@ jobs:
       - name: Deploy ECS service
         run: |
           aws ecs update-service \
-            --cluster "ecstatic-tiger-g6j5l1" \
-            --service "tbclassifier-inference-7a27-service-j23k9l8t" \
+            --cluster "advanced-frog-ig3pzu" \
+            --service "tbclassifier-inference" \
             --force-new-deployment
