@@ -102,5 +102,5 @@ jobs:
         run: |
           aws ecs update-service \
             --cluster "default" \
-            --service "tbclassifier-inference-a0a6" \
+            --service "tbclassifier-inference-d528" \
             --force-new-deployment
