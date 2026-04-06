@@ -66,7 +66,7 @@ class OutputResponse(BaseModel):
     grad_cam_image: str
 
 class PredictRequest(BaseModel):
-    xray_image_base64: str
+    xray_image: str
     patient_metadata: Optional[str] = None
     
 def load_model():
@@ -409,7 +409,7 @@ async def predict(
 @app.post("/predict", response_model=OutputResponse)
 async def predict(req: PredictRequest):
 
-    xray_image_base64 = req.xray_image_base64
+    xray_image_base64 = req.xray_image
 
     # Generate a unique case ID
     unique_id = str(uuid.uuid4())
