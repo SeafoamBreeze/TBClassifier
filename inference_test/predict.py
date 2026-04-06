@@ -3,9 +3,14 @@ import requests
 from pathlib import Path
 
 # ---------- CONFIG ----------
-API_URL = "http://localhost:8000/predict"
+API_URL = "http://localhost:7777/predict"
+# API_URL = "http://13.214.190.130:8000/predict"
 IMAGE_PATH = "tb1117.png"
 OUTPUT_HTML = "tb1117.html"
+
+import base64
+from pathlib import Path
+import requests
 
 # Optional: patient metadata (as JSON string)
 PATIENT_METADATA = None  # e.g., '{"age": 45, "gender": "M"}'
@@ -15,16 +20,18 @@ with open(IMAGE_PATH, "rb") as f:
     image_bytes = f.read()
 xray_image_base64 = base64.b64encode(image_bytes).decode("utf-8")
 
-# ---------- SEND REQUEST ----------
-data = {
+# ---------- PREPARE JSON PAYLOAD ----------
+payload = {
     "filename": Path(IMAGE_PATH).name,
     "xray_image_base64": xray_image_base64,
 }
 if PATIENT_METADATA:
-    data["patient_metadata"] = PATIENT_METADATA
+    payload["patient_metadata"] = PATIENT_METADATA
 
-response = requests.post(API_URL, data=data)
+# ---------- SEND REQUEST AS JSON ----------
+response = requests.post(API_URL, json=payload)
 response.raise_for_status()  # Raise an error if request failed
+data = response.json()
 
 result = response.json()
 case_id = result["case_id"]

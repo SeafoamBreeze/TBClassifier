@@ -65,6 +65,10 @@ class OutputResponse(BaseModel):
     confidence_score: float
     grad_cam_image: str
 
+class PredictRequest(BaseModel):
+    xray_image_base64: str
+    patient_metadata: Optional[str] = None
+    
 def load_model():
 
     global _model, _device, _gradcam
@@ -104,7 +108,7 @@ def preprocess_image(image_bytes):
     return standardized_tensor.to(_device), normalized_np, raw_image_tensor.to(_device)
 
 def get_class_name(prediction_idx):
-    classes = ["Healthy", "Others (Not Tuberculosis)", "Tuberculosis"]
+    classes = ["NORMAL", "OTHERS (NOT TUBERCULOSIS)", "TUBERCULOSIS"]
     return classes[prediction_idx]
 
 @asynccontextmanager
@@ -403,10 +407,10 @@ async def predict(
     )   
 
 @app.post("/predict", response_model=OutputResponse)
-async def predict(
-    xray_image_base64: str = Form(..., description="X-ray image in base64"),
-    patient_metadata: Optional[str] = Form(None, description="Optional JSON string of patient metadata")
-):
+async def predict(req: PredictRequest):
+
+    xray_image_base64 = req.xray_image_base64
+
     # Generate a unique case ID
     unique_id = str(uuid.uuid4())
     print(f"Generated case_id: {unique_id}")
