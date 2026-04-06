@@ -3,8 +3,8 @@ import requests
 from pathlib import Path
 
 # ---------- CONFIG ----------
-# API_URL = "http://localhost:7777/predict"
-API_URL = "http://13.229.227.121:8000/predict"
+API_URL = "http://localhost:7777/predict"
+# API_URL = "http://18.143.168.241:8000/predict"
 IMAGE_PATH = "tb1117.png"
 OUTPUT_HTML = "tb1117.html"
 
@@ -22,8 +22,7 @@ xray_image_base64 = base64.b64encode(image_bytes).decode("utf-8")
 
 # ---------- PREPARE JSON PAYLOAD ----------
 payload = {
-    "filename": Path(IMAGE_PATH).name,
-    "xray_image_base64": xray_image_base64,
+    "xray_image": xray_image_base64,
 }
 if PATIENT_METADATA:
     payload["patient_metadata"] = PATIENT_METADATA
