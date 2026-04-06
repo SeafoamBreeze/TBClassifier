@@ -67,7 +67,7 @@ class OutputResponse(BaseModel):
 
 class PredictRequest(BaseModel):
     xray_image: str
-    patient_metadata: Optional[str] = None
+    patient_metadata: Optional[dict] = None
     
 def load_model():
 

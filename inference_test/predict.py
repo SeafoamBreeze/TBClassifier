@@ -3,8 +3,8 @@ import requests
 from pathlib import Path
 
 # ---------- CONFIG ----------
-API_URL = "http://localhost:7777/predict"
-# API_URL = "http://18.143.168.241:8000/predict"
+# API_URL = "http://localhost:7777/predict"
+API_URL = "https://fxu7nkfoptegzaoojnmeiaqwa40dimmo.lambda-url.ap-southeast-1.on.aws/ "
 IMAGE_PATH = "tb1117.png"
 OUTPUT_HTML = "tb1117.html"
 
