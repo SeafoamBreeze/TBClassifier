@@ -81,6 +81,10 @@ jobs:
           aws-region: ap-southeast-1
           role-to-assume: ${{ secrets.AWS_ROLE }}
 
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+    
     - name: Build, Tag, and Push image to Amazon ECR
       id: build-image
       env:
@@ -107,3 +111,4 @@ jobs:
         service: "tbclassifier-inference"
         cluster: "advanced-frog-ig3pzu"
         wait-for-service-stability: true
+
