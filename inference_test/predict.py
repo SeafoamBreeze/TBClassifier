@@ -3,8 +3,8 @@ import requests
 from pathlib import Path
 
 # ---------- CONFIG ----------
-API_URL = "http://localhost:7777/predict"
-# API_URL = "http://13.214.190.130:8000/predict"
+# API_URL = "http://localhost:7777/predict"
+API_URL = "http://13.229.227.121:8000/predict"
 IMAGE_PATH = "tb1117.png"
 OUTPUT_HTML = "tb1117.html"
 
