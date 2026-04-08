@@ -1,0 +1,60 @@
+{
+    "_description": [
+        "This is the blueprint for the FastAPI container on AWS ECS Fargate.",
+        "It tells AWS how much CPU/RAM to use and maps port 8000.",
+        "GitHub Actions uses this file during deployment to swap out the image",
+        "with the newly built version and register a new task revision in AWS."
+    ],
+    "containerDefinitions": [
+        {
+            "name": "tbclassifier-demo",
+            "image": "019442939625.dkr.ecr.ap-southeast-1.amazonaws.com/tbclassifier-inference:latest",
+            "cpu": 0,
+            "portMappings": [
+                {
+                    "name": "tbclassifier-demo-80-tcp",
+                    "containerPort": 8000,
+                    "hostPort": 8000,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                }
+            ],
+            "essential": true,
+            "environment": [],
+            "environmentFiles": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "ulimits": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/default-tbclassifier-inference-d528",
+                    "awslogs-create-group": "true",
+                    "awslogs-region": "ap-southeast-1",
+                    "awslogs-stream-prefix": "ecs"
+                },
+                "secretOptions": []
+            },
+            "systemControls": []
+        }
+    ],
+    "family": "default-tbclassifier-inference-d528",
+    "taskRoleArn": "arn:aws:iam::019442939625:role/service-role/ecsTaskExecutionRole",
+    "executionRoleArn": "arn:aws:iam::019442939625:role/service-role/ecsTaskExecutionRole",
+    "networkMode": "awsvpc",
+    "volumes": [],
+    "placementConstraints": [],
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "1024",
+    "memory": "3072",
+    "ephemeralStorage": {
+        "sizeInGiB": 25
+    },
+    "runtimePlatform": {
+        "cpuArchitecture": "X86_64",
+        "operatingSystemFamily": "LINUX"
+    },
+    "enableFaultInjection": false
+}
